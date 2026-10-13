@@ -1,0 +1,34 @@
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  email TEXT UNIQUE NOT NULL,
+  mobile TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  email_verified BOOLEAN NOT NULL DEFAULT FALSE,
+  mobile_verified BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS payments (
+  id TEXT PRIMARY KEY,
+  amount INTEGER NOT NULL,
+  method TEXT NOT NULL,
+  status TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS shipments (
+  id TEXT PRIMARY KEY,
+  order_id TEXT NOT NULL,
+  pincode TEXT NOT NULL,
+  status TEXT NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS tracking_events (
+  id TEXT PRIMARY KEY,
+  shipment_id TEXT NOT NULL REFERENCES shipments(id),
+  status TEXT NOT NULL,
+  note TEXT NOT NULL DEFAULT '',
+  at TIMESTAMPTZ NOT NULL DEFAULT now()
+);

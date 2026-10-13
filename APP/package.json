@@ -1,0 +1,16 @@
+{
+  "name": "relaymart",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "smoke": "node scripts/smoke.mjs",
+    "images": "sh scripts/build-images.sh",
+    "ecr": "sh scripts/ecr-push.sh"
+  },
+  "dependencies": {
+    "amqplib": "^0.10.5",
+    "pg": "^8.13.1",
+    "redis": "^4.7.0"
+  }
+}

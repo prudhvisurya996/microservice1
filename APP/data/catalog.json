@@ -1,0 +1,163 @@
+{
+  "categories": [
+    { "id": "electronics", "name": "Electronics" },
+    { "id": "apparel", "name": "Apparel" },
+    { "id": "home", "name": "Home" },
+    { "id": "sport", "name": "Sport" },
+    { "id": "care", "name": "Care" }
+  ],
+  "products": [
+    {
+      "id": "fieldline-14",
+      "name": "Fieldline 14",
+      "category": "electronics",
+      "price": 62990,
+      "mrp": 74990,
+      "rating": 4.6,
+      "reviewCount": 1284,
+      "stock": 18,
+      "offer": "Studio week price",
+      "blurb": "A quiet 14-inch notebook for notes, labs, and long library hours.",
+      "specs": ["14-inch matte display", "16 GB memory", "512 GB storage", "All-day battery"],
+      "tags": ["laptop", "student", "notebook"],
+      "image": "/products/fieldline-14.jpg",
+      "reviews": [
+        { "author": "Meera", "stars": 5, "text": "Light enough for the commute and fast enough for class." },
+        { "author": "Rohan", "stars": 4, "text": "Keyboard is calm. Fans stay quiet unless I compile." }
+      ]
+    },
+    {
+      "id": "harbor-anc",
+      "name": "Harbor quiet headphones",
+      "category": "electronics",
+      "price": 8990,
+      "mrp": 12990,
+      "rating": 4.5,
+      "reviewCount": 860,
+      "stock": 40,
+      "offer": "Studio week price",
+      "blurb": "Over-ear quiet for hostels, trains, and focus blocks.",
+      "specs": ["Wireless", "Fold-flat case", "30-hour battery", "Wired backup"],
+      "tags": ["audio", "quiet", "study"],
+      "image": "/products/harbor-anc.jpg",
+      "reviews": [
+        { "author": "Isha", "stars": 5, "text": "The library finally feels optional." },
+        { "author": "Dev", "stars": 4, "text": "Clamp is gentle. Case is bulky." }
+      ]
+    },
+    {
+      "id": "northwool-coat",
+      "name": "Northwool chore coat",
+      "category": "apparel",
+      "price": 4490,
+      "mrp": 5990,
+      "rating": 4.4,
+      "reviewCount": 312,
+      "stock": 22,
+      "offer": "",
+      "blurb": "A heavy wool coat with pockets deep enough for a notebook.",
+      "specs": ["Wool blend", "Unlined", "Two patch pockets", "Horn buttons"],
+      "tags": ["coat", "winter", "wool"],
+      "image": "/products/northwool-coat.jpg",
+      "reviews": [
+        { "author": "Anil", "stars": 5, "text": "Warm without looking like sportswear." },
+        { "author": "Sara", "stars": 4, "text": "Runs a little long in the sleeve." }
+      ]
+    },
+    {
+      "id": "meadow-tee",
+      "name": "Meadow heavy tee",
+      "category": "apparel",
+      "price": 1490,
+      "mrp": 1990,
+      "rating": 4.3,
+      "reviewCount": 540,
+      "stock": 80,
+      "offer": "",
+      "blurb": "Thick cotton, oatmeal color, the shirt you stop thinking about.",
+      "specs": ["Heavy cotton", "Relaxed fit", "Rib collar", "Pre-washed"],
+      "tags": ["tee", "cotton", "everyday"],
+      "image": "/products/meadow-tee.jpg",
+      "reviews": [
+        { "author": "Nikhil", "stars": 4, "text": "Holds shape after a week of washes." },
+        { "author": "Tara", "stars": 5, "text": "The weight is the whole point." }
+      ]
+    },
+    {
+      "id": "kiln-lamp",
+      "name": "Kiln table lamp",
+      "category": "home",
+      "price": 3290,
+      "mrp": 4290,
+      "rating": 4.7,
+      "reviewCount": 198,
+      "stock": 15,
+      "offer": "",
+      "blurb": "A sand-glaze lamp for a desk that does not need overhead light.",
+      "specs": ["Ceramic base", "Linen shade", "E27 bulb", "Inline switch"],
+      "tags": ["lamp", "desk", "ceramic"],
+      "image": "/products/kiln-lamp.jpg",
+      "reviews": [
+        { "author": "Leela", "stars": 5, "text": "Warm light, no glare on the page." },
+        { "author": "Omar", "stars": 4, "text": "Shade arrived slightly creased. Steamed out." }
+      ]
+    },
+    {
+      "id": "cinder-kettle",
+      "name": "Cinder pour kettle",
+      "category": "home",
+      "price": 2490,
+      "mrp": 3290,
+      "rating": 4.6,
+      "reviewCount": 276,
+      "stock": 30,
+      "offer": "",
+      "blurb": "A matte gooseneck kettle with a slow, even pour.",
+      "specs": ["1 litre", "Gooseneck", "Stay-cool handle", "Induction safe"],
+      "tags": ["kettle", "coffee", "kitchen"],
+      "image": "/products/cinder-kettle.jpg",
+      "reviews": [
+        { "author": "Kabir", "stars": 5, "text": "Pour is steady. Heats fast." },
+        { "author": "Nia", "stars": 4, "text": "Heavier than it looks. That is fine." }
+      ]
+    },
+    {
+      "id": "cedar-runners",
+      "name": "Cedar daily runners",
+      "category": "sport",
+      "price": 3990,
+      "mrp": 5490,
+      "rating": 4.4,
+      "reviewCount": 701,
+      "stock": 36,
+      "offer": "",
+      "blurb": "Plain daily trainers for campus loops and actual errands.",
+      "specs": ["Road sole", "Breathable upper", "Removable insole", "Reflective heel"],
+      "tags": ["shoes", "run", "daily"],
+      "image": "/products/cedar-runners.jpg",
+      "reviews": [
+        { "author": "Farah", "stars": 5, "text": "True to size. Quiet on tile." },
+        { "author": "Joseph", "stars": 4, "text": "Cushion is moderate, which I wanted." }
+      ]
+    },
+    {
+      "id": "silt-care",
+      "name": "Silt daily care set",
+      "category": "care",
+      "price": 1890,
+      "mrp": 2490,
+      "rating": 4.5,
+      "reviewCount": 422,
+      "stock": 48,
+      "offer": "",
+      "blurb": "Three unscented steps: cleanse, treat, moisturize.",
+      "specs": ["Unscented", "Three bottles", "Travel caps", "No added color"],
+      "tags": ["skincare", "set", "daily"],
+      "image": "/products/silt-care.jpg",
+      "reviews": [
+        { "author": "Ayesha", "stars": 5, "text": "No perfume. Skin stopped complaining." },
+        { "author": "Vikram", "stars": 4, "text": "Moisturizer is richer than I expected." }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,158 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: logging
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluent-bit
+  namespace: logging
+data:
+  fluent-bit.conf: |
+    [SERVICE]
+        Flush        1
+        Parsers_File parsers.conf
+    [INPUT]
+        Name              tail
+        Tag               kube.*
+        Path              /var/log/containers/*.log
+        Parser            cri
+        Mem_Buf_Limit     8MB
+        Skip_Long_Lines   On
+        Refresh_Interval  5
+    [FILTER]
+        Name    grep
+        Match   kube.*
+        Regex   log "service"
+    [FILTER]
+        Name         parser
+        Match        kube.*
+        Key_Name     log
+        Parser       relaymart
+        Reserve_Data On
+    [OUTPUT]
+        Name               es
+        Match              kube.*
+        Host               ${ELASTICSEARCH_HOST}
+        Port               9200
+        Logstash_Format    On
+        Logstash_Prefix    relaymart
+        Suppress_Type_Name On
+        tls                Off
+        Retry_Limit        False
+  parsers.conf: |
+    [PARSER]
+        Name   cri
+        Format regex
+        Regex  ^(?<time>[^ ]+) (?<stream>stdout|stderr) (?<logtag>[^ ]*) (?<log>.*)$
+        Time_Key time
+        Time_Format %Y-%m-%dT%H:%M:%S.%L%z
+    [PARSER]
+        Name        relaymart
+        Format      json
+        Time_Key    ts
+        Time_Keep   On
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: fluent-bit
+  namespace: logging
+spec:
+  selector:
+    matchLabels: { app: fluent-bit }
+  template:
+    metadata:
+      labels: { app: fluent-bit }
+    spec:
+      serviceAccountName: fluent-bit
+      containers:
+        - name: fluent-bit
+          image: fluent/fluent-bit:3.1.9
+          env:
+            - name: ELASTICSEARCH_HOST
+              value: elasticsearch.logging.svc.cluster.local
+          volumeMounts:
+            - name: config
+              mountPath: /fluent-bit/etc/fluent-bit.conf
+              subPath: fluent-bit.conf
+            - name: config
+              mountPath: /fluent-bit/etc/parsers.conf
+              subPath: parsers.conf
+            - name: varlog
+              mountPath: /var/log
+              readOnly: true
+      volumes:
+        - name: config
+          configMap: { name: fluent-bit }
+        - name: varlog
+          hostPath: { path: /var/log }
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: fluent-bit
+  namespace: logging
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: elasticsearch
+  namespace: logging
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: elasticsearch }
+  template:
+    metadata:
+      labels: { app: elasticsearch }
+    spec:
+      containers:
+        - name: elasticsearch
+          image: docker.elastic.co/elasticsearch/elasticsearch:8.15.3
+          env:
+            - { name: discovery.type, value: single-node }
+            - { name: xpack.security.enabled, value: "false" }
+            - { name: ES_JAVA_OPTS, value: -Xms512m -Xmx512m }
+          ports: [{ containerPort: 9200 }]
+          resources:
+            requests: { cpu: 250m, memory: 1Gi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch
+  namespace: logging
+spec:
+  selector: { app: elasticsearch }
+  ports: [{ port: 9200, targetPort: 9200 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kibana
+  namespace: logging
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: kibana }
+  template:
+    metadata:
+      labels: { app: kibana }
+    spec:
+      containers:
+        - name: kibana
+          image: docker.elastic.co/kibana/kibana:8.15.3
+          env:
+            - { name: ELASTICSEARCH_HOSTS, value: http://elasticsearch:9200 }
+          ports: [{ containerPort: 5601 }]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kibana
+  namespace: logging
+spec:
+  selector: { app: kibana }
+  ports: [{ port: 5601, targetPort: 5601 }]

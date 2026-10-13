@@ -1,0 +1,1076 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: relaymart
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: gateway
+  namespace: relaymart
+spec:
+  rules:
+    - host: relaymart.classroom.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: gateway
+                port: { number: 4000 }
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: gateway
+  namespace: relaymart
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: gateway
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: { type: Utilization, averageUtilization: 70 }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: relaymart
+  labels: { app: frontend }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: frontend }
+  template:
+    metadata:
+      labels: { app: frontend }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "4173"
+        prometheus.io/path: /metrics
+    spec:
+      containers:
+        - name: frontend
+          image: relaymart/frontend:latest
+          ports: [{ containerPort: 4173 }]
+          env:
+            - { name: ENTRY, value: frontend/server.js }
+            - { name: PORT, value: "4173" }
+            - { name: SERVICE_NAME, value: frontend }
+            - { name: CATALOG_URL, value: http://catalog:4001 }
+            - { name: SEARCH_URL, value: http://search:4002 }
+            - { name: PRICING_URL, value: http://pricing:4003 }
+            - { name: INVENTORY_URL, value: http://inventory:4004 }
+            - { name: CART_URL, value: http://cart:4005 }
+            - { name: ORDER_URL, value: http://order:4006 }
+            - { name: PAYMENT_URL, value: http://payment:4007 }
+            - { name: SHIPPING_URL, value: http://shipping:4008 }
+            - { name: REVIEW_URL, value: http://review:4009 }
+            - { name: USER_URL, value: http://user:4010 }
+            - { name: NOTIFICATION_URL, value: http://notification:4011 }
+            - { name: RECOMMENDATION_URL, value: http://recommendation:4012 }
+            - { name: AUTH_URL, value: http://auth:4013 }
+            - { name: VERIFICATION_URL, value: http://verification:4014 }
+            - { name: TRACKING_URL, value: http://tracking:4015 }
+            - { name: DATABASE_URL, value: postgres://relay:relay@postgres:5432/relaymart }
+            - { name: REDIS_URL, value: redis://redis:6379 }
+            - { name: RABBIT_URL, value: amqp://relay:relay@rabbitmq:5672 }
+            - { name: GATEWAY_PUBLIC_URL, value: http://gateway:4000 }
+          readinessProbe:
+            httpGet: { path: /health, port: 4173 }
+            initialDelaySeconds: 2
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { cpu: 500m, memory: 256Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: relaymart
+spec:
+  selector: { app: frontend }
+  ports: [{ port: 4173, targetPort: 4173 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+  namespace: relaymart
+  labels: { app: gateway }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: gateway }
+  template:
+    metadata:
+      labels: { app: gateway }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "4000"
+        prometheus.io/path: /metrics
+    spec:
+      containers:
+        - name: gateway
+          image: relaymart/gateway:latest
+          ports: [{ containerPort: 4000 }]
+          env:
+            - { name: ENTRY, value: gateway/server.js }
+            - { name: PORT, value: "4000" }
+            - { name: SERVICE_NAME, value: gateway }
+            - { name: CATALOG_URL, value: http://catalog:4001 }
+            - { name: SEARCH_URL, value: http://search:4002 }
+            - { name: PRICING_URL, value: http://pricing:4003 }
+            - { name: INVENTORY_URL, value: http://inventory:4004 }
+            - { name: CART_URL, value: http://cart:4005 }
+            - { name: ORDER_URL, value: http://order:4006 }
+            - { name: PAYMENT_URL, value: http://payment:4007 }
+            - { name: SHIPPING_URL, value: http://shipping:4008 }
+            - { name: REVIEW_URL, value: http://review:4009 }
+            - { name: USER_URL, value: http://user:4010 }
+            - { name: NOTIFICATION_URL, value: http://notification:4011 }
+            - { name: RECOMMENDATION_URL, value: http://recommendation:4012 }
+            - { name: AUTH_URL, value: http://auth:4013 }
+            - { name: VERIFICATION_URL, value: http://verification:4014 }
+            - { name: TRACKING_URL, value: http://tracking:4015 }
+            - { name: DATABASE_URL, value: postgres://relay:relay@postgres:5432/relaymart }
+            - { name: REDIS_URL, value: redis://redis:6379 }
+            - { name: RABBIT_URL, value: amqp://relay:relay@rabbitmq:5672 }
+            - { name: GATEWAY_PUBLIC_URL, value: http://gateway:4000 }
+          readinessProbe:
+            httpGet: { path: /health, port: 4000 }
+            initialDelaySeconds: 2
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { cpu: 500m, memory: 256Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway
+  namespace: relaymart
+spec:
+  selector: { app: gateway }
+  ports: [{ port: 4000, targetPort: 4000 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalog
+  namespace: relaymart
+  labels: { app: catalog }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: catalog }
+  template:
+    metadata:
+      labels: { app: catalog }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "4001"
+        prometheus.io/path: /metrics
+    spec:
+      containers:
+        - name: catalog
+          image: relaymart/catalog:latest
+          ports: [{ containerPort: 4001 }]
+          env:
+            - { name: ENTRY, value: services/catalog/server.js }
+            - { name: PORT, value: "4001" }
+            - { name: SERVICE_NAME, value: catalog }
+            - { name: CATALOG_URL, value: http://catalog:4001 }
+            - { name: SEARCH_URL, value: http://search:4002 }
+            - { name: PRICING_URL, value: http://pricing:4003 }
+            - { name: INVENTORY_URL, value: http://inventory:4004 }
+            - { name: CART_URL, value: http://cart:4005 }
+            - { name: ORDER_URL, value: http://order:4006 }
+            - { name: PAYMENT_URL, value: http://payment:4007 }
+            - { name: SHIPPING_URL, value: http://shipping:4008 }
+            - { name: REVIEW_URL, value: http://review:4009 }
+            - { name: USER_URL, value: http://user:4010 }
+            - { name: NOTIFICATION_URL, value: http://notification:4011 }
+            - { name: RECOMMENDATION_URL, value: http://recommendation:4012 }
+            - { name: AUTH_URL, value: http://auth:4013 }
+            - { name: VERIFICATION_URL, value: http://verification:4014 }
+            - { name: TRACKING_URL, value: http://tracking:4015 }
+            - { name: DATABASE_URL, value: postgres://relay:relay@postgres:5432/relaymart }
+            - { name: REDIS_URL, value: redis://redis:6379 }
+            - { name: RABBIT_URL, value: amqp://relay:relay@rabbitmq:5672 }
+            - { name: GATEWAY_PUBLIC_URL, value: http://gateway:4000 }
+          readinessProbe:
+            httpGet: { path: /health, port: 4001 }
+            initialDelaySeconds: 2
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { cpu: 500m, memory: 256Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: catalog
+  namespace: relaymart
+spec:
+  selector: { app: catalog }
+  ports: [{ port: 4001, targetPort: 4001 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: search
+  namespace: relaymart
+  labels: { app: search }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: search }
+  template:
+    metadata:
+      labels: { app: search }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "4002"
+        prometheus.io/path: /metrics
+    spec:
+      containers:
+        - name: search
+          image: relaymart/search:latest
+          ports: [{ containerPort: 4002 }]
+          env:
+            - { name: ENTRY, value: services/search/server.js }
+            - { name: PORT, value: "4002" }
+            - { name: SERVICE_NAME, value: search }
+            - { name: CATALOG_URL, value: http://catalog:4001 }
+            - { name: SEARCH_URL, value: http://search:4002 }
+            - { name: PRICING_URL, value: http://pricing:4003 }
+            - { name: INVENTORY_URL, value: http://inventory:4004 }
+            - { name: CART_URL, value: http://cart:4005 }
+            - { name: ORDER_URL, value: http://order:4006 }
+            - { name: PAYMENT_URL, value: http://payment:4007 }
+            - { name: SHIPPING_URL, value: http://shipping:4008 }
+            - { name: REVIEW_URL, value: http://review:4009 }
+            - { name: USER_URL, value: http://user:4010 }
+            - { name: NOTIFICATION_URL, value: http://notification:4011 }
+            - { name: RECOMMENDATION_URL, value: http://recommendation:4012 }
+            - { name: AUTH_URL, value: http://auth:4013 }
+            - { name: VERIFICATION_URL, value: http://verification:4014 }
+            - { name: TRACKING_URL, value: http://tracking:4015 }
+            - { name: DATABASE_URL, value: postgres://relay:relay@postgres:5432/relaymart }
+            - { name: REDIS_URL, value: redis://redis:6379 }
+            - { name: RABBIT_URL, value: amqp://relay:relay@rabbitmq:5672 }
+            - { name: GATEWAY_PUBLIC_URL, value: http://gateway:4000 }
+          readinessProbe:
+            httpGet: { path: /health, port: 4002 }
+            initialDelaySeconds: 2
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { cpu: 500m, memory: 256Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: search
+  namespace: relaymart
+spec:
+  selector: { app: search }
+  ports: [{ port: 4002, targetPort: 4002 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pricing
+  namespace: relaymart
+  labels: { app: pricing }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: pricing }
+  template:
+    metadata:
+      labels: { app: pricing }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "4003"
+        prometheus.io/path: /metrics
+    spec:
+      containers:
+        - name: pricing
+          image: relaymart/pricing:latest
+          ports: [{ containerPort: 4003 }]
+          env:
+            - { name: ENTRY, value: services/pricing/server.js }
+            - { name: PORT, value: "4003" }
+            - { name: SERVICE_NAME, value: pricing }
+            - { name: CATALOG_URL, value: http://catalog:4001 }
+            - { name: SEARCH_URL, value: http://search:4002 }
+            - { name: PRICING_URL, value: http://pricing:4003 }
+            - { name: INVENTORY_URL, value: http://inventory:4004 }
+            - { name: CART_URL, value: http://cart:4005 }
+            - { name: ORDER_URL, value: http://order:4006 }
+            - { name: PAYMENT_URL, value: http://payment:4007 }
+            - { name: SHIPPING_URL, value: http://shipping:4008 }
+            - { name: REVIEW_URL, value: http://review:4009 }
+            - { name: USER_URL, value: http://user:4010 }
+            - { name: NOTIFICATION_URL, value: http://notification:4011 }
+            - { name: RECOMMENDATION_URL, value: http://recommendation:4012 }
+            - { name: AUTH_URL, value: http://auth:4013 }
+            - { name: VERIFICATION_URL, value: http://verification:4014 }
+            - { name: TRACKING_URL, value: http://tracking:4015 }
+            - { name: DATABASE_URL, value: postgres://relay:relay@postgres:5432/relaymart }
+            - { name: REDIS_URL, value: redis://redis:6379 }
+            - { name: RABBIT_URL, value: amqp://relay:relay@rabbitmq:5672 }
+            - { name: GATEWAY_PUBLIC_URL, value: http://gateway:4000 }
+          readinessProbe:
+            httpGet: { path: /health, port: 4003 }
+            initialDelaySeconds: 2
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { cpu: 500m, memory: 256Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pricing
+  namespace: relaymart
+spec:
+  selector: { app: pricing }
+  ports: [{ port: 4003, targetPort: 4003 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventory
+  namespace: relaymart
+  labels: { app: inventory }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: inventory }
+  template:
+    metadata:
+      labels: { app: inventory }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "4004"
+        prometheus.io/path: /metrics
+    spec:
+      containers:
+        - name: inventory
+          image: relaymart/inventory:latest
+          ports: [{ containerPort: 4004 }]
+          env:
+            - { name: ENTRY, value: services/inventory/server.js }
+            - { name: PORT, value: "4004" }
+            - { name: SERVICE_NAME, value: inventory }
+            - { name: CATALOG_URL, value: http://catalog:4001 }
+            - { name: SEARCH_URL, value: http://search:4002 }
+            - { name: PRICING_URL, value: http://pricing:4003 }
+            - { name: INVENTORY_URL, value: http://inventory:4004 }
+            - { name: CART_URL, value: http://cart:4005 }
+            - { name: ORDER_URL, value: http://order:4006 }
+            - { name: PAYMENT_URL, value: http://payment:4007 }
+            - { name: SHIPPING_URL, value: http://shipping:4008 }
+            - { name: REVIEW_URL, value: http://review:4009 }
+            - { name: USER_URL, value: http://user:4010 }
+            - { name: NOTIFICATION_URL, value: http://notification:4011 }
+            - { name: RECOMMENDATION_URL, value: http://recommendation:4012 }
+            - { name: AUTH_URL, value: http://auth:4013 }
+            - { name: VERIFICATION_URL, value: http://verification:4014 }
+            - { name: TRACKING_URL, value: http://tracking:4015 }
+            - { name: DATABASE_URL, value: postgres://relay:relay@postgres:5432/relaymart }
+            - { name: REDIS_URL, value: redis://redis:6379 }
+            - { name: RABBIT_URL, value: amqp://relay:relay@rabbitmq:5672 }
+            - { name: GATEWAY_PUBLIC_URL, value: http://gateway:4000 }
+          readinessProbe:
+            httpGet: { path: /health, port: 4004 }
+            initialDelaySeconds: 2
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { cpu: 500m, memory: 256Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: inventory
+  namespace: relaymart
+spec:
+  selector: { app: inventory }
+  ports: [{ port: 4004, targetPort: 4004 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cart
+  namespace: relaymart
+  labels: { app: cart }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: cart }
+  template:
+    metadata:
+      labels: { app: cart }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "4005"
+        prometheus.io/path: /metrics
+    spec:
+      containers:
+        - name: cart
+          image: relaymart/cart:latest
+          ports: [{ containerPort: 4005 }]
+          env:
+            - { name: ENTRY, value: services/cart/server.js }
+            - { name: PORT, value: "4005" }
+            - { name: SERVICE_NAME, value: cart }
+            - { name: CATALOG_URL, value: http://catalog:4001 }
+            - { name: SEARCH_URL, value: http://search:4002 }
+            - { name: PRICING_URL, value: http://pricing:4003 }
+            - { name: INVENTORY_URL, value: http://inventory:4004 }
+            - { name: CART_URL, value: http://cart:4005 }
+            - { name: ORDER_URL, value: http://order:4006 }
+            - { name: PAYMENT_URL, value: http://payment:4007 }
+            - { name: SHIPPING_URL, value: http://shipping:4008 }
+            - { name: REVIEW_URL, value: http://review:4009 }
+            - { name: USER_URL, value: http://user:4010 }
+            - { name: NOTIFICATION_URL, value: http://notification:4011 }
+            - { name: RECOMMENDATION_URL, value: http://recommendation:4012 }
+            - { name: AUTH_URL, value: http://auth:4013 }
+            - { name: VERIFICATION_URL, value: http://verification:4014 }
+            - { name: TRACKING_URL, value: http://tracking:4015 }
+            - { name: DATABASE_URL, value: postgres://relay:relay@postgres:5432/relaymart }
+            - { name: REDIS_URL, value: redis://redis:6379 }
+            - { name: RABBIT_URL, value: amqp://relay:relay@rabbitmq:5672 }
+            - { name: GATEWAY_PUBLIC_URL, value: http://gateway:4000 }
+          readinessProbe:
+            httpGet: { path: /health, port: 4005 }
+            initialDelaySeconds: 2
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { cpu: 500m, memory: 256Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cart
+  namespace: relaymart
+spec:
+  selector: { app: cart }
+  ports: [{ port: 4005, targetPort: 4005 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order
+  namespace: relaymart
+  labels: { app: order }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: order }
+  template:
+    metadata:
+      labels: { app: order }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "4006"
+        prometheus.io/path: /metrics
+    spec:
+      containers:
+        - name: order
+          image: relaymart/order:latest
+          ports: [{ containerPort: 4006 }]
+          env:
+            - { name: ENTRY, value: services/order/server.js }
+            - { name: PORT, value: "4006" }
+            - { name: SERVICE_NAME, value: order }
+            - { name: CATALOG_URL, value: http://catalog:4001 }
+            - { name: SEARCH_URL, value: http://search:4002 }
+            - { name: PRICING_URL, value: http://pricing:4003 }
+            - { name: INVENTORY_URL, value: http://inventory:4004 }
+            - { name: CART_URL, value: http://cart:4005 }
+            - { name: ORDER_URL, value: http://order:4006 }
+            - { name: PAYMENT_URL, value: http://payment:4007 }
+            - { name: SHIPPING_URL, value: http://shipping:4008 }
+            - { name: REVIEW_URL, value: http://review:4009 }
+            - { name: USER_URL, value: http://user:4010 }
+            - { name: NOTIFICATION_URL, value: http://notification:4011 }
+            - { name: RECOMMENDATION_URL, value: http://recommendation:4012 }
+            - { name: AUTH_URL, value: http://auth:4013 }
+            - { name: VERIFICATION_URL, value: http://verification:4014 }
+            - { name: TRACKING_URL, value: http://tracking:4015 }
+            - { name: DATABASE_URL, value: postgres://relay:relay@postgres:5432/relaymart }
+            - { name: REDIS_URL, value: redis://redis:6379 }
+            - { name: RABBIT_URL, value: amqp://relay:relay@rabbitmq:5672 }
+            - { name: GATEWAY_PUBLIC_URL, value: http://gateway:4000 }
+          readinessProbe:
+            httpGet: { path: /health, port: 4006 }
+            initialDelaySeconds: 2
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { cpu: 500m, memory: 256Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order
+  namespace: relaymart
+spec:
+  selector: { app: order }
+  ports: [{ port: 4006, targetPort: 4006 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment
+  namespace: relaymart
+  labels: { app: payment }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: payment }
+  template:
+    metadata:
+      labels: { app: payment }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "4007"
+        prometheus.io/path: /metrics
+    spec:
+      containers:
+        - name: payment
+          image: relaymart/payment:latest
+          ports: [{ containerPort: 4007 }]
+          env:
+            - { name: ENTRY, value: services/payment/server.js }
+            - { name: PORT, value: "4007" }
+            - { name: SERVICE_NAME, value: payment }
+            - { name: CATALOG_URL, value: http://catalog:4001 }
+            - { name: SEARCH_URL, value: http://search:4002 }
+            - { name: PRICING_URL, value: http://pricing:4003 }
+            - { name: INVENTORY_URL, value: http://inventory:4004 }
+            - { name: CART_URL, value: http://cart:4005 }
+            - { name: ORDER_URL, value: http://order:4006 }
+            - { name: PAYMENT_URL, value: http://payment:4007 }
+            - { name: SHIPPING_URL, value: http://shipping:4008 }
+            - { name: REVIEW_URL, value: http://review:4009 }
+            - { name: USER_URL, value: http://user:4010 }
+            - { name: NOTIFICATION_URL, value: http://notification:4011 }
+            - { name: RECOMMENDATION_URL, value: http://recommendation:4012 }
+            - { name: AUTH_URL, value: http://auth:4013 }
+            - { name: VERIFICATION_URL, value: http://verification:4014 }
+            - { name: TRACKING_URL, value: http://tracking:4015 }
+            - { name: DATABASE_URL, value: postgres://relay:relay@postgres:5432/relaymart }
+            - { name: REDIS_URL, value: redis://redis:6379 }
+            - { name: RABBIT_URL, value: amqp://relay:relay@rabbitmq:5672 }
+            - { name: GATEWAY_PUBLIC_URL, value: http://gateway:4000 }
+          readinessProbe:
+            httpGet: { path: /health, port: 4007 }
+            initialDelaySeconds: 2
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { cpu: 500m, memory: 256Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment
+  namespace: relaymart
+spec:
+  selector: { app: payment }
+  ports: [{ port: 4007, targetPort: 4007 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shipping
+  namespace: relaymart
+  labels: { app: shipping }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: shipping }
+  template:
+    metadata:
+      labels: { app: shipping }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "4008"
+        prometheus.io/path: /metrics
+    spec:
+      containers:
+        - name: shipping
+          image: relaymart/shipping:latest
+          ports: [{ containerPort: 4008 }]
+          env:
+            - { name: ENTRY, value: services/shipping/server.js }
+            - { name: PORT, value: "4008" }
+            - { name: SERVICE_NAME, value: shipping }
+            - { name: CATALOG_URL, value: http://catalog:4001 }
+            - { name: SEARCH_URL, value: http://search:4002 }
+            - { name: PRICING_URL, value: http://pricing:4003 }
+            - { name: INVENTORY_URL, value: http://inventory:4004 }
+            - { name: CART_URL, value: http://cart:4005 }
+            - { name: ORDER_URL, value: http://order:4006 }
+            - { name: PAYMENT_URL, value: http://payment:4007 }
+            - { name: SHIPPING_URL, value: http://shipping:4008 }
+            - { name: REVIEW_URL, value: http://review:4009 }
+            - { name: USER_URL, value: http://user:4010 }
+            - { name: NOTIFICATION_URL, value: http://notification:4011 }
+            - { name: RECOMMENDATION_URL, value: http://recommendation:4012 }
+            - { name: AUTH_URL, value: http://auth:4013 }
+            - { name: VERIFICATION_URL, value: http://verification:4014 }
+            - { name: TRACKING_URL, value: http://tracking:4015 }
+            - { name: DATABASE_URL, value: postgres://relay:relay@postgres:5432/relaymart }
+            - { name: REDIS_URL, value: redis://redis:6379 }
+            - { name: RABBIT_URL, value: amqp://relay:relay@rabbitmq:5672 }
+            - { name: GATEWAY_PUBLIC_URL, value: http://gateway:4000 }
+          readinessProbe:
+            httpGet: { path: /health, port: 4008 }
+            initialDelaySeconds: 2
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { cpu: 500m, memory: 256Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: shipping
+  namespace: relaymart
+spec:
+  selector: { app: shipping }
+  ports: [{ port: 4008, targetPort: 4008 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: review
+  namespace: relaymart
+  labels: { app: review }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: review }
+  template:
+    metadata:
+      labels: { app: review }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "4009"
+        prometheus.io/path: /metrics
+    spec:
+      containers:
+        - name: review
+          image: relaymart/review:latest
+          ports: [{ containerPort: 4009 }]
+          env:
+            - { name: ENTRY, value: services/review/server.js }
+            - { name: PORT, value: "4009" }
+            - { name: SERVICE_NAME, value: review }
+            - { name: CATALOG_URL, value: http://catalog:4001 }
+            - { name: SEARCH_URL, value: http://search:4002 }
+            - { name: PRICING_URL, value: http://pricing:4003 }
+            - { name: INVENTORY_URL, value: http://inventory:4004 }
+            - { name: CART_URL, value: http://cart:4005 }
+            - { name: ORDER_URL, value: http://order:4006 }
+            - { name: PAYMENT_URL, value: http://payment:4007 }
+            - { name: SHIPPING_URL, value: http://shipping:4008 }
+            - { name: REVIEW_URL, value: http://review:4009 }
+            - { name: USER_URL, value: http://user:4010 }
+            - { name: NOTIFICATION_URL, value: http://notification:4011 }
+            - { name: RECOMMENDATION_URL, value: http://recommendation:4012 }
+            - { name: AUTH_URL, value: http://auth:4013 }
+            - { name: VERIFICATION_URL, value: http://verification:4014 }
+            - { name: TRACKING_URL, value: http://tracking:4015 }
+            - { name: DATABASE_URL, value: postgres://relay:relay@postgres:5432/relaymart }
+            - { name: REDIS_URL, value: redis://redis:6379 }
+            - { name: RABBIT_URL, value: amqp://relay:relay@rabbitmq:5672 }
+            - { name: GATEWAY_PUBLIC_URL, value: http://gateway:4000 }
+          readinessProbe:
+            httpGet: { path: /health, port: 4009 }
+            initialDelaySeconds: 2
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { cpu: 500m, memory: 256Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: review
+  namespace: relaymart
+spec:
+  selector: { app: review }
+  ports: [{ port: 4009, targetPort: 4009 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user
+  namespace: relaymart
+  labels: { app: user }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: user }
+  template:
+    metadata:
+      labels: { app: user }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "4010"
+        prometheus.io/path: /metrics
+    spec:
+      containers:
+        - name: user
+          image: relaymart/user:latest
+          ports: [{ containerPort: 4010 }]
+          env:
+            - { name: ENTRY, value: services/user/server.js }
+            - { name: PORT, value: "4010" }
+            - { name: SERVICE_NAME, value: user }
+            - { name: CATALOG_URL, value: http://catalog:4001 }
+            - { name: SEARCH_URL, value: http://search:4002 }
+            - { name: PRICING_URL, value: http://pricing:4003 }
+            - { name: INVENTORY_URL, value: http://inventory:4004 }
+            - { name: CART_URL, value: http://cart:4005 }
+            - { name: ORDER_URL, value: http://order:4006 }
+            - { name: PAYMENT_URL, value: http://payment:4007 }
+            - { name: SHIPPING_URL, value: http://shipping:4008 }
+            - { name: REVIEW_URL, value: http://review:4009 }
+            - { name: USER_URL, value: http://user:4010 }
+            - { name: NOTIFICATION_URL, value: http://notification:4011 }
+            - { name: RECOMMENDATION_URL, value: http://recommendation:4012 }
+            - { name: AUTH_URL, value: http://auth:4013 }
+            - { name: VERIFICATION_URL, value: http://verification:4014 }
+            - { name: TRACKING_URL, value: http://tracking:4015 }
+            - { name: DATABASE_URL, value: postgres://relay:relay@postgres:5432/relaymart }
+            - { name: REDIS_URL, value: redis://redis:6379 }
+            - { name: RABBIT_URL, value: amqp://relay:relay@rabbitmq:5672 }
+            - { name: GATEWAY_PUBLIC_URL, value: http://gateway:4000 }
+          readinessProbe:
+            httpGet: { path: /health, port: 4010 }
+            initialDelaySeconds: 2
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { cpu: 500m, memory: 256Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user
+  namespace: relaymart
+spec:
+  selector: { app: user }
+  ports: [{ port: 4010, targetPort: 4010 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification
+  namespace: relaymart
+  labels: { app: notification }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: notification }
+  template:
+    metadata:
+      labels: { app: notification }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "4011"
+        prometheus.io/path: /metrics
+    spec:
+      containers:
+        - name: notification
+          image: relaymart/notification:latest
+          ports: [{ containerPort: 4011 }]
+          env:
+            - { name: ENTRY, value: services/notification/server.js }
+            - { name: PORT, value: "4011" }
+            - { name: SERVICE_NAME, value: notification }
+            - { name: CATALOG_URL, value: http://catalog:4001 }
+            - { name: SEARCH_URL, value: http://search:4002 }
+            - { name: PRICING_URL, value: http://pricing:4003 }
+            - { name: INVENTORY_URL, value: http://inventory:4004 }
+            - { name: CART_URL, value: http://cart:4005 }
+            - { name: ORDER_URL, value: http://order:4006 }
+            - { name: PAYMENT_URL, value: http://payment:4007 }
+            - { name: SHIPPING_URL, value: http://shipping:4008 }
+            - { name: REVIEW_URL, value: http://review:4009 }
+            - { name: USER_URL, value: http://user:4010 }
+            - { name: NOTIFICATION_URL, value: http://notification:4011 }
+            - { name: RECOMMENDATION_URL, value: http://recommendation:4012 }
+            - { name: AUTH_URL, value: http://auth:4013 }
+            - { name: VERIFICATION_URL, value: http://verification:4014 }
+            - { name: TRACKING_URL, value: http://tracking:4015 }
+            - { name: DATABASE_URL, value: postgres://relay:relay@postgres:5432/relaymart }
+            - { name: REDIS_URL, value: redis://redis:6379 }
+            - { name: RABBIT_URL, value: amqp://relay:relay@rabbitmq:5672 }
+            - { name: GATEWAY_PUBLIC_URL, value: http://gateway:4000 }
+          readinessProbe:
+            httpGet: { path: /health, port: 4011 }
+            initialDelaySeconds: 2
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { cpu: 500m, memory: 256Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification
+  namespace: relaymart
+spec:
+  selector: { app: notification }
+  ports: [{ port: 4011, targetPort: 4011 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: recommendation
+  namespace: relaymart
+  labels: { app: recommendation }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: recommendation }
+  template:
+    metadata:
+      labels: { app: recommendation }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "4012"
+        prometheus.io/path: /metrics
+    spec:
+      containers:
+        - name: recommendation
+          image: relaymart/recommendation:latest
+          ports: [{ containerPort: 4012 }]
+          env:
+            - { name: ENTRY, value: services/recommendation/server.js }
+            - { name: PORT, value: "4012" }
+            - { name: SERVICE_NAME, value: recommendation }
+            - { name: CATALOG_URL, value: http://catalog:4001 }
+            - { name: SEARCH_URL, value: http://search:4002 }
+            - { name: PRICING_URL, value: http://pricing:4003 }
+            - { name: INVENTORY_URL, value: http://inventory:4004 }
+            - { name: CART_URL, value: http://cart:4005 }
+            - { name: ORDER_URL, value: http://order:4006 }
+            - { name: PAYMENT_URL, value: http://payment:4007 }
+            - { name: SHIPPING_URL, value: http://shipping:4008 }
+            - { name: REVIEW_URL, value: http://review:4009 }
+            - { name: USER_URL, value: http://user:4010 }
+            - { name: NOTIFICATION_URL, value: http://notification:4011 }
+            - { name: RECOMMENDATION_URL, value: http://recommendation:4012 }
+            - { name: AUTH_URL, value: http://auth:4013 }
+            - { name: VERIFICATION_URL, value: http://verification:4014 }
+            - { name: TRACKING_URL, value: http://tracking:4015 }
+            - { name: DATABASE_URL, value: postgres://relay:relay@postgres:5432/relaymart }
+            - { name: REDIS_URL, value: redis://redis:6379 }
+            - { name: RABBIT_URL, value: amqp://relay:relay@rabbitmq:5672 }
+            - { name: GATEWAY_PUBLIC_URL, value: http://gateway:4000 }
+          readinessProbe:
+            httpGet: { path: /health, port: 4012 }
+            initialDelaySeconds: 2
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { cpu: 500m, memory: 256Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: recommendation
+  namespace: relaymart
+spec:
+  selector: { app: recommendation }
+  ports: [{ port: 4012, targetPort: 4012 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth
+  namespace: relaymart
+  labels: { app: auth }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: auth }
+  template:
+    metadata:
+      labels: { app: auth }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "4013"
+        prometheus.io/path: /metrics
+    spec:
+      containers:
+        - name: auth
+          image: relaymart/auth:latest
+          ports: [{ containerPort: 4013 }]
+          env:
+            - { name: ENTRY, value: services/auth/server.js }
+            - { name: PORT, value: "4013" }
+            - { name: SERVICE_NAME, value: auth }
+            - { name: CATALOG_URL, value: http://catalog:4001 }
+            - { name: SEARCH_URL, value: http://search:4002 }
+            - { name: PRICING_URL, value: http://pricing:4003 }
+            - { name: INVENTORY_URL, value: http://inventory:4004 }
+            - { name: CART_URL, value: http://cart:4005 }
+            - { name: ORDER_URL, value: http://order:4006 }
+            - { name: PAYMENT_URL, value: http://payment:4007 }
+            - { name: SHIPPING_URL, value: http://shipping:4008 }
+            - { name: REVIEW_URL, value: http://review:4009 }
+            - { name: USER_URL, value: http://user:4010 }
+            - { name: NOTIFICATION_URL, value: http://notification:4011 }
+            - { name: RECOMMENDATION_URL, value: http://recommendation:4012 }
+            - { name: AUTH_URL, value: http://auth:4013 }
+            - { name: VERIFICATION_URL, value: http://verification:4014 }
+            - { name: TRACKING_URL, value: http://tracking:4015 }
+            - { name: DATABASE_URL, value: postgres://relay:relay@postgres:5432/relaymart }
+            - { name: REDIS_URL, value: redis://redis:6379 }
+            - { name: RABBIT_URL, value: amqp://relay:relay@rabbitmq:5672 }
+            - { name: GATEWAY_PUBLIC_URL, value: http://gateway:4000 }
+          readinessProbe:
+            httpGet: { path: /health, port: 4013 }
+            initialDelaySeconds: 2
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { cpu: 500m, memory: 256Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth
+  namespace: relaymart
+spec:
+  selector: { app: auth }
+  ports: [{ port: 4013, targetPort: 4013 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verification
+  namespace: relaymart
+  labels: { app: verification }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: verification }
+  template:
+    metadata:
+      labels: { app: verification }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "4014"
+        prometheus.io/path: /metrics
+    spec:
+      containers:
+        - name: verification
+          image: relaymart/verification:latest
+          ports: [{ containerPort: 4014 }]
+          env:
+            - { name: ENTRY, value: services/verification/server.js }
+            - { name: PORT, value: "4014" }
+            - { name: SERVICE_NAME, value: verification }
+            - { name: CATALOG_URL, value: http://catalog:4001 }
+            - { name: SEARCH_URL, value: http://search:4002 }
+            - { name: PRICING_URL, value: http://pricing:4003 }
+            - { name: INVENTORY_URL, value: http://inventory:4004 }
+            - { name: CART_URL, value: http://cart:4005 }
+            - { name: ORDER_URL, value: http://order:4006 }
+            - { name: PAYMENT_URL, value: http://payment:4007 }
+            - { name: SHIPPING_URL, value: http://shipping:4008 }
+            - { name: REVIEW_URL, value: http://review:4009 }
+            - { name: USER_URL, value: http://user:4010 }
+            - { name: NOTIFICATION_URL, value: http://notification:4011 }
+            - { name: RECOMMENDATION_URL, value: http://recommendation:4012 }
+            - { name: AUTH_URL, value: http://auth:4013 }
+            - { name: VERIFICATION_URL, value: http://verification:4014 }
+            - { name: TRACKING_URL, value: http://tracking:4015 }
+            - { name: DATABASE_URL, value: postgres://relay:relay@postgres:5432/relaymart }
+            - { name: REDIS_URL, value: redis://redis:6379 }
+            - { name: RABBIT_URL, value: amqp://relay:relay@rabbitmq:5672 }
+            - { name: GATEWAY_PUBLIC_URL, value: http://gateway:4000 }
+          readinessProbe:
+            httpGet: { path: /health, port: 4014 }
+            initialDelaySeconds: 2
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { cpu: 500m, memory: 256Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: verification
+  namespace: relaymart
+spec:
+  selector: { app: verification }
+  ports: [{ port: 4014, targetPort: 4014 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tracking
+  namespace: relaymart
+  labels: { app: tracking }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: tracking }
+  template:
+    metadata:
+      labels: { app: tracking }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "4015"
+        prometheus.io/path: /metrics
+    spec:
+      containers:
+        - name: tracking
+          image: relaymart/tracking:latest
+          ports: [{ containerPort: 4015 }]
+          env:
+            - { name: ENTRY, value: services/tracking/server.js }
+            - { name: PORT, value: "4015" }
+            - { name: SERVICE_NAME, value: tracking }
+            - { name: CATALOG_URL, value: http://catalog:4001 }
+            - { name: SEARCH_URL, value: http://search:4002 }
+            - { name: PRICING_URL, value: http://pricing:4003 }
+            - { name: INVENTORY_URL, value: http://inventory:4004 }
+            - { name: CART_URL, value: http://cart:4005 }
+            - { name: ORDER_URL, value: http://order:4006 }
+            - { name: PAYMENT_URL, value: http://payment:4007 }
+            - { name: SHIPPING_URL, value: http://shipping:4008 }
+            - { name: REVIEW_URL, value: http://review:4009 }
+            - { name: USER_URL, value: http://user:4010 }
+            - { name: NOTIFICATION_URL, value: http://notification:4011 }
+            - { name: RECOMMENDATION_URL, value: http://recommendation:4012 }
+            - { name: AUTH_URL, value: http://auth:4013 }
+            - { name: VERIFICATION_URL, value: http://verification:4014 }
+            - { name: TRACKING_URL, value: http://tracking:4015 }
+            - { name: DATABASE_URL, value: postgres://relay:relay@postgres:5432/relaymart }
+            - { name: REDIS_URL, value: redis://redis:6379 }
+            - { name: RABBIT_URL, value: amqp://relay:relay@rabbitmq:5672 }
+            - { name: GATEWAY_PUBLIC_URL, value: http://gateway:4000 }
+          readinessProbe:
+            httpGet: { path: /health, port: 4015 }
+            initialDelaySeconds: 2
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { cpu: 500m, memory: 256Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tracking
+  namespace: relaymart
+spec:
+  selector: { app: tracking }
+  ports: [{ port: 4015, targetPort: 4015 }]

@@ -1,0 +1,25 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: relaymart
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - gateway:4000
+          - catalog:4001
+          - search:4002
+          - pricing:4003
+          - inventory:4004
+          - cart:4005
+          - order:4006
+          - payment:4007
+          - shipping:4008
+          - review:4009
+          - user:4010
+          - notification:4011
+          - recommendation:4012
+          - auth:4013
+          - verification:4014
+          - tracking:4015
+          - frontend:4173

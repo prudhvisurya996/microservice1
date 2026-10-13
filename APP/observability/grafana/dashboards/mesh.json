@@ -1,0 +1,28 @@
+{
+  "uid": "relaymart",
+  "title": "RelayMart mesh",
+  "schemaVersion": 39,
+  "timezone": "browser",
+  "refresh": "5s",
+  "time": { "from": "now-15m", "to": "now" },
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Requests by service",
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 0 },
+      "targets": [{ "expr": "sum by (service) (rate(http_requests_total[1m]))", "refId": "A" }]
+    },
+    {
+      "type": "stat",
+      "title": "Error responses",
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 9 },
+      "targets": [{ "expr": "sum(rate(http_requests_total{status=~\"4..|5..\"}[5m]))", "refId": "A" }]
+    },
+    {
+      "type": "stat",
+      "title": "Average latency (ms)",
+      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 9 },
+      "targets": [{ "expr": "sum(rate(http_request_duration_ms_sum[5m])) / sum(rate(http_request_duration_ms_count[5m]))", "refId": "A" }]
+    }
+  ]
+}
