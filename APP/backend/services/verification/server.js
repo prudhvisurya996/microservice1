@@ -109,10 +109,16 @@ function routePair(kind) {
         const logged = { channel: noun, to: value, expSeconds: 300, delivered: delivery.delivered, via: delivery.reason };
         if (!delivery.delivered) logged.code = otp;
         logEvent("verification", "otp_issued", logged);
-        return {
-          status: 202,
-          body: { sent: true, delivered: delivery.delivered, via: delivery.reason, channel: noun, to: value, expSeconds: 300 },
+        const responseBody = {
+          sent: true,
+          delivered: delivery.delivered,
+          via: delivery.reason,
+          channel: noun,
+          to: value,
+          expSeconds: 300,
         };
+        if (!delivery.delivered) responseBody.code = otp;
+        return { status: 202, body: responseBody };
       },
     },
     {

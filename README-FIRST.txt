@@ -1,14 +1,11 @@
 RelayMart source
 
-frontend/   shop only. Run this on the frontend server.
-backend/    gateway, services, Postgres, Redis, RabbitMQ. Run this on the backend server.
+APP/frontend  shop. Run on the frontend server.
+APP/backend   gateway, services, database, Redis, RabbitMQ. Run on the backend server.
 
-Both folders are inside APP/.
+Backend:
+  cd APP/backend && docker compose up --build -d
 
-Backend server:
-  cd APP/backend
-  docker compose up --build -d
-
-Frontend server:
+Frontend:
   cd APP/frontend
   GATEWAY_PUBLIC_URL=http://BACKEND_PUBLIC_IP:4000 docker compose up --build -d
