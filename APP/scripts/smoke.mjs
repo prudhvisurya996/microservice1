@@ -6,19 +6,19 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const kids = [];
 
 const services = [
-  ["services/catalog/server.js", 4001, "catalog"],
-  ["services/search/server.js", 4002, "search"],
-  ["services/pricing/server.js", 4003, "pricing"],
-  ["services/inventory/server.js", 4004, "inventory"],
-  ["services/cart/server.js", 4005, "cart"],
-  ["services/order/server.js", 4006, "order"],
-  ["services/payment/server.js", 4007, "payment"],
-  ["services/shipping/server.js", 4008, "shipping"],
-  ["services/review/server.js", 4009, "review"],
-  ["services/user/server.js", 4010, "user"],
-  ["services/notification/server.js", 4011, "notification"],
-  ["services/recommendation/server.js", 4012, "recommendation"],
-  ["gateway/server.js", 4000, "gateway"],
+  ["backend/services/catalog/server.js", 4001, "catalog"],
+  ["backend/services/search/server.js", 4002, "search"],
+  ["backend/services/pricing/server.js", 4003, "pricing"],
+  ["backend/services/inventory/server.js", 4004, "inventory"],
+  ["backend/services/cart/server.js", 4005, "cart"],
+  ["backend/services/order/server.js", 4006, "order"],
+  ["backend/services/payment/server.js", 4007, "payment"],
+  ["backend/services/shipping/server.js", 4008, "shipping"],
+  ["backend/services/review/server.js", 4009, "review"],
+  ["backend/services/user/server.js", 4010, "user"],
+  ["backend/services/notification/server.js", 4011, "notification"],
+  ["backend/services/recommendation/server.js", 4012, "recommendation"],
+  ["backend/gateway/server.js", 4000, "gateway"],
 ];
 
 function start(entry, port, name) {

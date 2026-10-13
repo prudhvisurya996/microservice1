@@ -1,0 +1,279 @@
+name: relaymart
+
+x-app: &app
+  build:
+    context: .
+
+services:
+  gateway:
+    <<: *app
+    build:
+      context: .
+      dockerfile: gateway/Dockerfile
+    image: relaymart/gateway:local
+    ports: ["4000:4000"]
+    environment: &gateway-env
+      PORT: "4000"
+      SERVICE_NAME: gateway
+      CATALOG_URL: http://catalog:4001
+      SEARCH_URL: http://search:4002
+      PRICING_URL: http://pricing:4003
+      INVENTORY_URL: http://inventory:4004
+      CART_URL: http://cart:4005
+      ORDER_URL: http://order:4006
+      PAYMENT_URL: http://payment:4007
+      SHIPPING_URL: http://shipping:4008
+      REVIEW_URL: http://review:4009
+      USER_URL: http://user:4010
+      NOTIFICATION_URL: http://notification:4011
+      RECOMMENDATION_URL: http://recommendation:4012
+      AUTH_URL: http://auth:4013
+      VERIFICATION_URL: http://verification:4014
+      TRACKING_URL: http://tracking:4015
+    depends_on:
+      catalog: { condition: service_healthy }
+      search: { condition: service_healthy }
+      pricing: { condition: service_healthy }
+      inventory: { condition: service_healthy }
+      cart: { condition: service_healthy }
+      order: { condition: service_healthy }
+      payment: { condition: service_healthy }
+      shipping: { condition: service_healthy }
+      review: { condition: service_healthy }
+      user: { condition: service_healthy }
+      notification: { condition: service_healthy }
+      recommendation: { condition: service_healthy }
+      auth: { condition: service_healthy }
+      verification: { condition: service_healthy }
+      tracking: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 4s
+      retries: 12
+      start_period: 8s
+
+  catalog:
+    <<: *app
+    build: { context: ., dockerfile: services/catalog/Dockerfile }
+    image: relaymart/catalog:local
+    environment: { PORT: "4001", SERVICE_NAME: catalog }
+    healthcheck: &hc
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:'+process.env.PORT+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 4s
+      retries: 12
+      start_period: 8s
+  search:
+    <<: *app
+    build: { context: ., dockerfile: services/search/Dockerfile }
+    image: relaymart/search:local
+    environment: { PORT: "4002", SERVICE_NAME: search }
+    healthcheck: *hc
+  pricing:
+    <<: *app
+    build: { context: ., dockerfile: services/pricing/Dockerfile }
+    image: relaymart/pricing:local
+    environment: { PORT: "4003", SERVICE_NAME: pricing }
+    healthcheck: *hc
+  inventory:
+    <<: *app
+    build: { context: ., dockerfile: services/inventory/Dockerfile }
+    image: relaymart/inventory:local
+    environment: { PORT: "4004", SERVICE_NAME: inventory }
+    healthcheck: *hc
+  cart:
+    <<: *app
+    build: { context: ., dockerfile: services/cart/Dockerfile }
+    image: relaymart/cart:local
+    environment: { PORT: "4005", SERVICE_NAME: cart }
+    healthcheck: *hc
+  order:
+    <<: *app
+    build: { context: ., dockerfile: services/order/Dockerfile }
+    image: relaymart/order:local
+    environment: { PORT: "4006", SERVICE_NAME: order }
+    healthcheck: *hc
+  payment:
+    <<: *app
+    build: { context: ., dockerfile: services/payment/Dockerfile }
+    image: relaymart/payment:local
+    environment:
+      PORT: "4007"
+      SERVICE_NAME: payment
+      DATABASE_URL: postgres://relay:relay@postgres:5432/relaymart
+      RABBIT_URL: amqp://relay:relay@rabbitmq:5672
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    healthcheck: *hc
+  shipping:
+    <<: *app
+    build: { context: ., dockerfile: services/shipping/Dockerfile }
+    image: relaymart/shipping:local
+    environment: { PORT: "4008", SERVICE_NAME: shipping }
+    healthcheck: *hc
+  review:
+    <<: *app
+    build: { context: ., dockerfile: services/review/Dockerfile }
+    image: relaymart/review:local
+    environment: { PORT: "4009", SERVICE_NAME: review }
+    healthcheck: *hc
+  user:
+    <<: *app
+    build: { context: ., dockerfile: services/user/Dockerfile }
+    image: relaymart/user:local
+    environment: { PORT: "4010", SERVICE_NAME: user }
+    healthcheck: *hc
+  notification:
+    <<: *app
+    build: { context: ., dockerfile: services/notification/Dockerfile }
+    image: relaymart/notification:local
+    environment:
+      PORT: "4011"
+      SERVICE_NAME: notification
+      RABBIT_URL: amqp://relay:relay@rabbitmq:5672
+    depends_on:
+      rabbitmq: { condition: service_healthy }
+    healthcheck: *hc
+  recommendation:
+    <<: *app
+    build: { context: ., dockerfile: services/recommendation/Dockerfile }
+    image: relaymart/recommendation:local
+    environment: { PORT: "4012", SERVICE_NAME: recommendation }
+    healthcheck: *hc
+  auth:
+    <<: *app
+    build: { context: ., dockerfile: services/auth/Dockerfile }
+    image: relaymart/auth:local
+    environment:
+      PORT: "4013"
+      SERVICE_NAME: auth
+      DATABASE_URL: postgres://relay:relay@postgres:5432/relaymart
+      REDIS_URL: redis://redis:6379
+      RABBIT_URL: amqp://relay:relay@rabbitmq:5672
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    healthcheck: *hc
+  verification:
+    <<: *app
+    build: { context: ., dockerfile: services/verification/Dockerfile }
+    image: relaymart/verification:local
+    environment:
+      PORT: "4014"
+      SERVICE_NAME: verification
+      REDIS_URL: redis://redis:6379
+      RABBIT_URL: amqp://relay:relay@rabbitmq:5672
+      GMAIL_USER: ${GMAIL_USER:-}
+      GMAIL_APP_PASSWORD: ${GMAIL_APP_PASSWORD:-}
+      SMS_API_KEY: ${SMS_API_KEY:-}
+      SMS_PROVIDER: ${SMS_PROVIDER:-fast2sms}
+      MSG91_TEMPLATE_ID: ${MSG91_TEMPLATE_ID:-}
+    depends_on:
+      redis: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    healthcheck: *hc
+  tracking:
+    <<: *app
+    build: { context: ., dockerfile: services/tracking/Dockerfile }
+    image: relaymart/tracking:local
+    environment:
+      PORT: "4015"
+      SERVICE_NAME: tracking
+      DATABASE_URL: postgres://relay:relay@postgres:5432/relaymart
+      RABBIT_URL: amqp://relay:relay@rabbitmq:5672
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    healthcheck: *hc
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: relay
+      POSTGRES_PASSWORD: relay
+      POSTGRES_DB: relaymart
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports: ["5432:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U relay -d relaymart"]
+      interval: 5s
+      timeout: 4s
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: relay
+      RABBITMQ_DEFAULT_PASS: relay
+    ports: ["5672:5672", "15672:15672"]
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 8s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.3
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+    ports: ["9200:9200"]
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'cat < /dev/null > /dev/tcp/127.0.0.1/9200'"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 20s
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.15.3
+    ports: ["5601:5601"]
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    depends_on:
+      elasticsearch: { condition: service_healthy }
+
+  fluent-bit:
+    image: fluent/fluent-bit:3.1.9
+    volumes:
+      - ../observability/fluent-bit/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
+      - ../observability/fluent-bit/parsers.conf:/fluent-bit/etc/parsers.conf:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    depends_on:
+      elasticsearch: { condition: service_healthy }
+    command: ["/fluent-bit/bin/fluent-bit", "-c", "/fluent-bit/etc/fluent-bit.conf"]
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    volumes:
+      - ../observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports: ["9090:9090"]
+    depends_on: [gateway]
+
+  grafana:
+    image: grafana/grafana:11.3.1
+    ports: ["3000:3000"]
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: relaymart
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    volumes:
+      - ../observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on: [prometheus]

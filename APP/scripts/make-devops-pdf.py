@@ -135,7 +135,7 @@ pdf.rect(0, 0, 210, 64, "F")
 pdf.set_xy(16, 18)
 pdf.set_text_color(255, 255, 255)
 pdf.set_font("Helvetica", "", 11)
-mc(6, "CLASSROOM RUNBOOK")
+mc(6, "DEVOPS RUNBOOK")
 pdf.set_text_color(255, 255, 255)
 pdf.set_font("Helvetica", "B", 26)
 mc(11, "RelayMart")
@@ -147,9 +147,8 @@ mc(6.5, "from the clone to live monitoring")
 pdf.set_text_color(*INK)
 pdf.set_y(72)
 body(
-    "This is the procedure for the RelayMart mesh in the APP folder. "
-    "It is a teaching marketplace, not Flipkart's code. "
-    "Clone it, prove it with Docker Compose, push one image per service to ECR, "
+    "This is the procedure for the RelayMart services in the APP folder. "
+    "Clone the source, prove it with Docker Compose, push one image per service to ECR, "
     "run those same images on ECS and on EKS, and read the logs in Kibana."
 )
 body("Do the phases in order. Do not open ECS until Compose and Kibana have already shown a register and an OTP.")
@@ -200,7 +199,7 @@ body(
     "Honest limits. Payment writes an authorized row. It does not call a bank. "
     "Email and mobile codes are not sent by SES or SNS. They sit in Redis for five minutes, "
     "go out on RabbitMQ, and are printed in the verification log so Kibana can show them. "
-    "Elasticsearch here is one node with security off. Use Amazon OpenSearch outside the classroom."
+    "Elasticsearch here is one node with security off. Use Amazon OpenSearch in production."
 )
 
 h1("2. What to install first")
@@ -246,7 +245,7 @@ table(
         ["API gateway", "http://127.0.0.1:4000", "none"],
         ["Kibana", "http://127.0.0.1:5601", "security off"],
         ["RabbitMQ", "http://127.0.0.1:15672", "relay / relay"],
-        ["Grafana", "http://127.0.0.1:3000", "admin / classroom"],
+        ["Grafana", "http://127.0.0.1:3000", "admin / see compose file"],
         ["Prometheus", "http://127.0.0.1:9090", "none"],
     ],
     [36, 78, 64],
@@ -256,18 +255,18 @@ body("If you are on a laptop and the stack is on a server, tunnel the ports with
 h1("5. Prove the application")
 body("This is the gate. If these calls fail, stop. Do not push images and do not apply Terraform. Use a new email if you register twice.")
 step(5, "Register a shopper", "Auth writes the user in Postgres and publishes user.registered.")
-code("curl -s -X POST http://127.0.0.1:4000/api/register \\\n  -H 'content-type: application/json' \\\n  -d '{\"name\":\"Asha Menon\",\"email\":\"asha@classroom.relaymart\",\"mobile\":\"9845012345\",\"password\":\"classroom123\"}'")
+code("curl -s -X POST http://127.0.0.1:4000/api/register \\\n  -H 'content-type: application/json' \\\n  -d '{\"name\":\"Asha Menon\",\"email\":\"asha@example.com\",\"mobile\":\"9845012345\",\"password\":\"Relaymart123\"}'")
 expect("HTTP 201 and a user id. Login is refused until both OTPs are confirmed.")
 step(6, "Send the email code", "Verification stores a 6-digit code in Redis and prints it to stdout.")
-code("curl -s -X POST http://127.0.0.1:4000/api/verify/email/send \\\n  -H 'content-type: application/json' \\\n  -d '{\"email\":\"asha@classroom.relaymart\"}'\ndocker compose logs --tail 40 verification")
+code("curl -s -X POST http://127.0.0.1:4000/api/verify/email/send \\\n  -H 'content-type: application/json' \\\n  -d '{\"email\":\"asha@example.com\"}'\ndocker compose logs --tail 40 verification")
 expect('A JSON line with msg otp_issued, channel email, and code. The code expires in 300 seconds.')
 step(7, "Confirm the email", "Replace THE_CODE with the six digits from that log.")
-code("curl -s -X POST http://127.0.0.1:4000/api/verify/email/confirm \\\n  -H 'content-type: application/json' \\\n  -d '{\"email\":\"asha@classroom.relaymart\",\"code\":\"THE_CODE\"}'")
+code("curl -s -X POST http://127.0.0.1:4000/api/verify/email/confirm \\\n  -H 'content-type: application/json' \\\n  -d '{\"email\":\"asha@example.com\",\"code\":\"THE_CODE\"}'")
 expect("verified true, and account.ok true. Auth has marked the email verified in Postgres.")
 step(8, "Send and confirm the mobile code", "Login stays blocked until this succeeds.")
 code("curl -s -X POST http://127.0.0.1:4000/api/verify/mobile/send \\\n  -H 'content-type: application/json' \\\n  -d '{\"mobile\":\"9845012345\"}'\ndocker compose logs --tail 20 verification\ncurl -s -X POST http://127.0.0.1:4000/api/verify/mobile/confirm \\\n  -H 'content-type: application/json' \\\n  -d '{\"mobile\":\"9845012345\",\"code\":\"THE_CODE\"}'")
 step(9, "Log in", "Auth checks the password and both verified flags, then stores a session in Redis.")
-code("curl -s -X POST http://127.0.0.1:4000/api/login \\\n  -H 'content-type: application/json' \\\n  -d '{\"email\":\"asha@classroom.relaymart\",\"password\":\"classroom123\"}'")
+code("curl -s -X POST http://127.0.0.1:4000/api/login \\\n  -H 'content-type: application/json' \\\n  -d '{\"email\":\"asha@example.com\",\"password\":\"Relaymart123\"}'")
 expect("A token and the user. A wrong password returns invalid_login. A missing OTP returns verification_required.")
 step(10, "Create a shipment and scan it", "Tracking writes Postgres rows and publishes tracking.updated.")
 code("curl -s -X POST http://127.0.0.1:4000/api/tracking/shipments \\\n  -H 'content-type: application/json' \\\n  -d '{\"orderId\":\"ord_demo\",\"pincode\":\"560001\"}'")
@@ -291,7 +290,7 @@ code('service: "verification" and msg: "otp_issued"\nservice: "auth" and msg: "l
 expect("otp_issued shows the address and the code. delivered means notification consumed the RabbitMQ message. If Discover is empty but docker compose logs shows JSON, Fluent Bit is not reading the Docker log files. See the fault list.")
 step(14, "Check the other consoles", "")
 bullet("RabbitMQ on port 15672, user relay, password relay. Queues should include notification.otp.email, notification.otp.mobile, notification.tracking.updated, notification.payment.authorized, and notification.user.registered.")
-bullet("Grafana on port 3000, user admin, password classroom. It reads Prometheus.")
+bullet("Grafana on port 3000. User admin. Password is GF_SECURITY_ADMIN_PASSWORD in docker-compose.yml. Grafana reads Prometheus.")
 bullet("Prometheus on port 9090. Query http_requests_total. The gateway count must have moved after your curls.")
 code("docker compose logs -f gateway verification auth")
 
@@ -314,7 +313,7 @@ body("A full image looks like that prefix, then /auth:latest.")
 
 h1("9. Data services on AWS")
 body("Compose started Postgres, Redis, and RabbitMQ for you. ECS and EKS do not. On AWS, Redis is ElastiCache and Postgres is RDS. The broker can be Amazon MQ, or a RabbitMQ you run yourself.")
-step(18, "Change the RDS password first", "Open deploy/ecs/elasticache.tf and replace classroom-change-me before the first apply.")
+step(18, "Change the RDS password first", "Open deploy/ecs/elasticache.tf and replace the placeholder database password before the first apply.")
 step(19, "Create RDS and ElastiCache", "From deploy/ecs. This apply also starts the ECS services. Auth will fail until you set the database URL. That is expected on this pass.")
 code("cd deploy/ecs\nterraform init\nterraform apply \\\n  -var vpc_id=vpc-xxxx \\\n  -var 'subnet_ids=[\"subnet-a\",\"subnet-b\"]' \\\n  -var execution_role_arn=arn:aws:iam::123456789012:role/ecsTaskExecutionRole \\\n  -var image_prefix=123456789012.dkr.ecr.ap-south-1.amazonaws.com/relaymart \\\n  -var create_rds=true \\\n  -var create_elasticache=true")
 code("terraform output elasticache_endpoint\nterraform output rds_endpoint")
@@ -342,7 +341,7 @@ h1("11. Run the same images on EKS")
 body("The node role must be able to pull from ECR. AmazonEC2ContainerRegistryReadOnly on the node role is enough. There is no imagePullSecret in this manifest.")
 step(25, "Render the manifests with your ECR prefix and apply them", "IMAGE_PREFIX has no trailing slash and no service name.")
 code("cd ../..\nIMAGE_PREFIX=123456789012.dkr.ecr.ap-south-1.amazonaws.com/relaymart \\\n  node deploy/eks/render.mjs\nkubectl apply -f deploy/eks/mesh.yaml")
-expect("Namespace relaymart. One Deployment and one Service per process. Gateway has 2 replicas and an HPA. The Ingress host is relaymart.classroom.local.")
+expect("Namespace relaymart. One Deployment and one Service per process. Gateway has 2 replicas and an HPA. The Ingress host is relaymart.local.")
 step(26, "Point the data URLs at AWS", "render.mjs writes DATABASE_URL, REDIS_URL, and RABBIT_URL. The defaults are the Compose hostnames. Edit those three in deploy/eks/render.mjs to the RDS, ElastiCache, and broker endpoints. Render again and apply again.")
 code("kubectl -n relaymart get deploy\nkubectl -n relaymart rollout status deploy/auth\nkubectl -n relaymart rollout status deploy/gateway")
 step(27, "Open the gateway and repeat the proof", "")
@@ -388,7 +387,7 @@ body("Confirm email and mobile. Registering the same email again returns email_o
 h2("Kibana is empty but the container log has JSON")
 body("On Compose, Fluent Bit reads /var/lib/docker/containers. That is the Docker json-file driver. containerd, rootless Docker, or another log driver will not match observability/fluent-bit/fluent-bit.conf. On EKS it reads /var/log/containers, and the fluent-bit DaemonSet must be Running.")
 h2("elasticsearch is Pending")
-body("It requests 1 GB. Free a node, or lower that request in deploy/eks/efk.yaml for a lab cluster only.")
+body("It requests 1 GB. Free a node, or lower that request in deploy/eks/efk.yaml on a small cluster.")
 h2("ECS cannot pull the image")
 body("image_prefix does not match the account that owns the repositories, or the execution role cannot call ecr:GetAuthorizationToken and ecr:BatchGetImage.")
 h2("FireLens tasks fail")
@@ -398,12 +397,12 @@ h1("15. Stop it")
 code("docker compose down -v")
 body("That deletes the Compose database volume.")
 code("cd deploy/ecs\nterraform destroy")
-body("RDS in this lab file sets skip_final_snapshot = true. Destroy deletes the database with no snapshot. Do not point it at data you must keep.")
+body("This Terraform file sets skip_final_snapshot = true. Destroy deletes the database with no snapshot. Do not point it at data you must keep.")
 code("kubectl delete -f deploy/eks/mesh.yaml\nkubectl delete -f deploy/eks/efk.yaml")
 
-h1("16. What you tell the class")
+h1("16. How the pieces fit")
 body("One set of images. Compose proves the images, the schema, the OTP, and the log pipeline. ECR stores them. ECS runs them on Fargate with Cloud Map. EKS runs the same tags as Deployments. Stdout stays the contract: JSON lines, shipped by Fluent Bit, read in Kibana. Grafana answers how many and how slow. Kibana answers what one register, OTP, payment, or scan did.")
-body("When the exercise is over, swap the stand-ins: SES or SNS in the notification consumer, a real payment provider, and Amazon OpenSearch with TLS.")
+body("For production, swap the stand-ins: SES or SNS in the notification consumer, a real payment provider, and Amazon OpenSearch with TLS.")
 
 pdf.output(OUT)
 print(OUT, "pages", pdf.page)

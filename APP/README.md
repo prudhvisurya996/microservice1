@@ -23,6 +23,29 @@ JSON logs go to stdout: `service`, `msg`, `path`, `status`. Fluent Bit tails the
 
 OTP codes are not sent through SES or SNS. They are stored in Redis for 5 minutes, published on RabbitMQ, and written to stdout so they show up in Kibana. The notification service consumes the queue. Swap that consumer for SES or SNS when you want real delivery.
 
+## Two servers
+
+Frontend code is only in `frontend/`. Backend code is only in `backend/` (gateway, services, Postgres, Redis, RabbitMQ). Clone the same repository on both machines.
+
+Backend server. Open port 4000. Do not open 4173.
+
+```bash
+cd backend
+docker compose up --build -d
+curl -s http://127.0.0.1:4000/health
+```
+
+Frontend server. Open port 4173.
+
+```bash
+cd frontend
+GATEWAY_PUBLIC_URL=http://BACKEND_PUBLIC_IP:4000 docker compose up --build -d
+```
+
+Use the backend public IP. The shop in the browser calls that gateway. It does not call the frontend server for API requests.
+
+From the repository root, the same split is `sh scripts/up-backend.sh` and `GATEWAY_PUBLIC_URL=http://BACKEND_PUBLIC_IP:4000 sh scripts/up-frontend.sh`.
+
 ## 1. Test with Docker Compose
 
 On the server, from this folder:

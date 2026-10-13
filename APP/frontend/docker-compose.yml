@@ -1,0 +1,10 @@
+name: relaymart-frontend
+
+services:
+  frontend:
+    build: .
+    image: relaymart/frontend:local
+    ports: ["4173:4173"]
+    environment:
+      PORT: "4173"
+      GATEWAY_PUBLIC_URL: ${GATEWAY_PUBLIC_URL:-http://127.0.0.1:4000}

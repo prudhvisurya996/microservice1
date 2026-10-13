@@ -13,12 +13,13 @@ for name in $services; do
   repo="relaymart/$name"
   aws ecr describe-repositories --region "$AWS_REGION" --repository-names "$repo" >/dev/null 2>&1 \
     || aws ecr create-repository --region "$AWS_REGION" --repository-name "$repo" >/dev/null
-  file="services/$name/Dockerfile"
-  if [ "$name" = "frontend" ]; then file="frontend/Dockerfile"; fi
-  if [ "$name" = "gateway" ]; then file="gateway/Dockerfile"; fi
+  file="backend/services/$name/Dockerfile"
+  context="backend"
+  if [ "$name" = "frontend" ]; then file="frontend/Dockerfile"; context="frontend"; fi
+  if [ "$name" = "gateway" ]; then file="backend/gateway/Dockerfile"; context="backend"; fi
   image="$registry/$repo:$tag"
   echo "push $image"
-  docker build -f "$file" -t "$image" .
+  docker build -f "$file" -t "$image" "$context"
   docker push "$image"
 done
 echo "ECR prefix: $registry/relaymart"

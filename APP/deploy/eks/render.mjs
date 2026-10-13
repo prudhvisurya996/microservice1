@@ -107,7 +107,7 @@ metadata:
   namespace: relaymart
 spec:
   rules:
-    - host: relaymart.classroom.local
+    - host: relaymart.local
       http:
         paths:
           - path: /
