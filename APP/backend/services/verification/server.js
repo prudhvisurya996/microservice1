@@ -1,6 +1,6 @@
 import { randomInt } from "node:crypto";
 import nodemailer from "nodemailer";
-import { logEvent, publish, rabbitChannel, redisClient } from "../../lib/data.js";
+import { audit, logEvent, publish, rabbitChannel, redisClient } from "../../lib/data.js";
 import { start } from "../../lib/http.js";
 
 const redis = await redisClient();
@@ -103,12 +103,18 @@ function routePair(kind) {
           delivery = noun === "email" ? await sendGmail(value, otp) : await sendIndiaSms(value, otp);
         } catch (error) {
           delivery = { delivered: false, reason: "provider_error" };
-          logEvent("verification", "otp_delivery_failed", { channel: noun, to: value, detail: String(error.message || error) }, "error");
+          logEvent("verification", "otp_delivery_failed", { event: { category: "verification", action: "delivery_failed" }, user: { email: noun === "email" ? value : "", mobile: noun === "mobile" ? value : "" }, detail: String(error.message || error) }, "error");
         }
         await publish(channel, `otp.${noun}`, { channel: noun, to: value, expSeconds: 300, delivered: delivery.delivered });
-        const logged = { channel: noun, to: value, expSeconds: 300, delivered: delivery.delivered, via: delivery.reason };
-        if (!delivery.delivered) logged.code = otp;
-        logEvent("verification", "otp_issued", logged);
+        const logged = {
+          event: { dataset: "relaymart.verification", category: "verification", action: "code_issued" },
+          user: noun === "email" ? { email: value } : { mobile: value },
+          channel: noun,
+          expSeconds: 300,
+          delivered: delivery.delivered,
+          via: delivery.reason,
+        };
+        logEvent("verification", "code_issued", logged);
         const responseBody = {
           sent: true,
           delivered: delivery.delivered,
@@ -131,10 +137,10 @@ function routePair(kind) {
         if (!value) return { status: 400, body: { error: noun === "email" ? "email_required" : "indian_mobile_required" } };
         const ok = await takeOtp(`otp:${noun}:${value}`, given);
         if (!ok) {
-          logEvent("verification", "otp_rejected", { channel: noun, to: value }, "warn");
+          audit("verification", "verification", "code_rejected", { user: noun === "email" ? { email: value } : { mobile: value }, channel: noun }, "warn");
           return { status: 400, body: { error: "invalid_code" } };
         }
-        logEvent("verification", "otp_confirmed", { channel: noun, to: value });
+        audit("verification", "verification", "code_confirmed", { user: noun === "email" ? { email: value } : { mobile: value }, channel: noun });
         return { body: { verified: true, channel: noun, to: value } };
       },
     },

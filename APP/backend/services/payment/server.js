@@ -20,7 +20,7 @@ start({
         };
         if (process.env.DATABASE_URL || process.env.RABBIT_URL) {
           import("../../lib/data.js")
-            .then(async ({ pgPool, publish, rabbitChannel, logEvent }) => {
+            .then(async ({ pgPool, publish, rabbitChannel, audit }) => {
               const pool = process.env.DATABASE_URL ? await pgPool() : null;
               if (pool) {
                 await pool.query(
@@ -30,7 +30,9 @@ start({
               }
               const channel = process.env.RABBIT_URL ? await rabbitChannel() : null;
               await publish(channel, "payment.authorized", payment);
-              logEvent("payment", "recorded", { paymentId: payment.paymentId });
+              audit("payment", "payment", "authorized", {
+                payment: { id: payment.paymentId, amount: payment.amount, method },
+              });
             })
             .catch((error) => {
               process.stdout.write(

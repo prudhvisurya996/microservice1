@@ -1,6 +1,6 @@
 import { randomBytes, randomUUID, scrypt as scryptCb, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
-import { logEvent, pgPool, publish, rabbitChannel, redisClient } from "../../lib/data.js";
+import { audit, pgPool, publish, rabbitChannel, redisClient } from "../../lib/data.js";
 import { start } from "../../lib/http.js";
 
 const scrypt = promisify(scryptCb);
@@ -87,7 +87,7 @@ start({
         }
         const user = { id, name, email, mobile, emailVerified: false, mobileVerified: false };
         await publish(channel, "user.registered", { id, email, mobile });
-        logEvent("auth", "registered", { userId: id, email });
+        audit("auth", "authentication", "registered", { user: { id, email, mobile } });
         return { status: 201, body: { user } };
       },
     },
@@ -100,14 +100,15 @@ start({
         const result = await pool.query(`SELECT * FROM users WHERE email = $1`, [email]);
         const row = result.rows[0];
         if (!row || !(await checkPassword(String(body.password || ""), row.password_hash))) {
-          logEvent("auth", "login_failed", { email }, "warn");
+          audit("auth", "authentication", "login_failed", { user: { email } }, "warn");
           return { status: 401, body: { error: "invalid_login" } };
         }
         if (!row.email_verified || !row.mobile_verified) {
+          audit("auth", "authentication", "login_blocked", { user: { id: row.id, email } }, "warn");
           return { status: 403, body: { error: "verification_required", user: publicUser(row) } };
         }
         const token = await saveSession(row.id);
-        logEvent("auth", "login", { userId: row.id });
+        audit("auth", "authentication", "login", { user: { id: row.id, email: row.email } });
         return { body: { token, user: publicUser(row) } };
       },
     },
@@ -136,7 +137,10 @@ start({
           [value],
         );
         if (!result.rows[0]) return { status: 404, body: { error: "user_not_found" } };
-        logEvent("auth", "verified", { channel: body.channel, userId: result.rows[0].id });
+        audit("auth", "authentication", "verified", {
+          user: { id: result.rows[0].id, email: result.rows[0].email, mobile: result.rows[0].mobile },
+          channel: body.channel,
+        });
         return { body: { ok: true, userId: result.rows[0].id } };
       },
     },

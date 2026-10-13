@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { logEvent, pgPool, publish, rabbitChannel } from "../../lib/data.js";
+import { audit, pgPool, publish, rabbitChannel } from "../../lib/data.js";
 import { start } from "../../lib/http.js";
 
 const STATUSES = ["created", "picked_up", "in_transit", "out_for_delivery", "delivered"];
@@ -45,7 +45,10 @@ start({
         );
         const bodyOut = await shipment(id);
         await publish(channel, "tracking.updated", bodyOut);
-        logEvent("tracking", "shipment_created", { shipmentId: id, orderId });
+        audit("tracking", "tracking", "created", {
+          order: { id: orderId, pincode },
+          shipment: { id, status: "created" },
+        });
         return { status: 201, body: bodyOut };
       },
     },
@@ -67,7 +70,10 @@ start({
         );
         const bodyOut = await shipment(params.id);
         await publish(channel, "tracking.updated", bodyOut);
-        logEvent("tracking", "scan", { shipmentId: params.id, status });
+        audit("tracking", "tracking", "scan", {
+          order: { id: bodyOut.orderId },
+          shipment: { id: params.id, status, note: String(body.note || "") },
+        });
         return { body: bodyOut };
       },
     },

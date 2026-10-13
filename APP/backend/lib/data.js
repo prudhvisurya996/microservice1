@@ -8,6 +8,23 @@ export function logEvent(service, msg, extra = {}, level = "info") {
   );
 }
 
+export function audit(service, category, action, fields = {}, level = "info") {
+  const { user, order, payment, shipment, ...rest } = fields;
+  logEvent(
+    service,
+    action,
+    {
+      event: { dataset: `relaymart.${category}`, category, action },
+      ...(user ? { user } : {}),
+      ...(order ? { order } : {}),
+      ...(payment ? { payment } : {}),
+      ...(shipment ? { shipment } : {}),
+      ...rest,
+    },
+    level,
+  );
+}
+
 async function waitFor(label, fn, tries = 30) {
   let last = new Error(label);
   for (let attempt = 1; attempt <= tries; attempt += 1) {

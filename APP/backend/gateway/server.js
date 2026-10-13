@@ -1,4 +1,5 @@
 import { loadServices } from "../lib/catalog.js";
+import { audit } from "../lib/data.js";
 import { start } from "../lib/http.js";
 
 const urls = {
@@ -214,6 +215,28 @@ start({
     },
     {
       method: "POST",
+      path: "/api/orders/:id/cancel",
+      async handler({ params, body }) {
+        const result = await hop([], "order", `/orders/${params.id}/cancel`, { method: "POST", body: {} });
+        if (result.ok) {
+          audit("gateway", "order", "cancelled", {
+            user: { email: String(body.email || "") },
+            order: { id: params.id },
+          });
+        }
+        return { status: result.status || 502, body: result.body };
+      },
+    },
+    {
+      method: "POST",
+      path: "/api/logout",
+      handler({ body }) {
+        audit("gateway", "authentication", "logout", { user: { email: String(body.email || "") } });
+        return { body: { ok: true } };
+      },
+    },
+    {
+      method: "POST",
       path: "/api/checkout",
       async handler({ body }) {
         const trace = [];
@@ -253,11 +276,12 @@ start({
         const order = await hop(trace, "order", "/orders", {
           method: "POST",
           body: {
-            userId: user.body.user?.id || "asha",
+            userId: body.email || user.body.user?.id || "guest",
             lines: priced.body.lines,
             total: priced.body.total,
             paymentId: pay.body.paymentId,
             pincode: body.pincode,
+            address: body.address || "",
             etaDays: eta.body.days,
             method: body.method || "upi",
           },
@@ -268,6 +292,24 @@ start({
         }
 
         await hop(trace, "inventory", "/commit", { method: "POST", body: { reservationId: reserved.body.reservationId } });
+        const tracked = await hop(trace, "tracking", "/shipments", {
+          method: "POST",
+          body: { orderId: order.body.order?.id, pincode: body.pincode },
+        });
+        const items = (priced.body.lines || []).map((line) => `${line.name} x${line.qty}`).join(", ");
+        audit("gateway", "order", "placed", {
+          user: { email: body.email || "" },
+          order: {
+            id: order.body.order?.id,
+            items,
+            amount: priced.body.total,
+            pincode: body.pincode || "",
+            address: body.address || "",
+            etaDays: eta.body.days,
+          },
+          payment: { id: pay.body.paymentId, method: body.method || "upi" },
+          shipment: { id: tracked.body?.id || "" },
+        });
         await hop(trace, "notification", "/notify", {
           method: "POST",
           body: {
@@ -280,7 +322,15 @@ start({
 
         return {
           status: 201,
-          body: { order: order.body.order, trace, priced: priced.body, eta: eta.body, payment: pay.body },
+          body: {
+            status: "order_placed_successful",
+            message: `Order placed successful. Delivery in ${eta.body.days} days.`,
+            order: order.body.order,
+            trace,
+            priced: priced.body,
+            eta: eta.body,
+            payment: pay.body,
+          },
         };
       },
     },
