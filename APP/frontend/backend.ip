@@ -1,0 +1,3 @@
+# One line only if the shop server is not the backend server.
+# Example: 3.26.55.184
+# Leave this file as comments when both run on the same machine.

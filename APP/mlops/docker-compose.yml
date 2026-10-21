@@ -1,0 +1,14 @@
+name: relaymart-ml
+
+services:
+  ml:
+    build: .
+    image: relaymart/ml:local
+    environment:
+      PROMPT: ${PROMPT:-}
+      LOG_DIR: ""
+    ports: ["8088:8088"]
+    volumes:
+      - ./es.url:/app/es.url:ro
+      - ./reports:/app/reports
+    restart: unless-stopped

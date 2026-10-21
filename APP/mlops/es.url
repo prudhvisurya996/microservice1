@@ -1,0 +1,2 @@
+# Server 3. One line, the backend Elasticsearch address. No quote marks.
+# http://BACKEND_PUBLIC_IP:9200
